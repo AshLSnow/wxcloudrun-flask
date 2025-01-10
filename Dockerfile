@@ -1,20 +1,21 @@
 # 二开推荐阅读[如何提高项目构建效率](https://developers.weixin.qq.com/miniprogram/dev/wxcloudrun/src/scene/build/speed.html)
 # 选择基础镜像。如需更换，请到[dockerhub官方仓库](https://hub.docker.com/_/python?tab=tags)自行选择后替换。
 # 已知alpine镜像与pytorch有兼容性问题会导致构建失败，如需使用pytorch请务必按需更换基础镜像。
-FROM alpine:3.13
+FROM python:3.9-slim-buster # 更换基础镜像，alpine镜像对selenium支持不好
 
 # 容器默认时区为UTC，如需使用上海时间请启用以下时区设置命令
-# RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo Asia/Shanghai > /etc/timezone
+RUN apt-get update && apt-get install -y tzdata && \ # 修改安装方式
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
 
-# 使用 HTTPS 协议访问容器云调用证书安装
-RUN apk add ca-certificates
+# 安装必要的系统依赖(selenium需要)
+RUN apt-get install -y wget unzip chromium-browser
 
-# 安装依赖包，如需其他依赖包，请到alpine依赖包管理(https://pkgs.alpinelinux.org/packages?name=php8*imagick*&branch=v3.13)查找。
-# 选用国内镜像源以提高下载速度
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tencent.com/g' /etc/apk/repositories \
-# 安装python3
-&& apk add --update --no-cache python3 py3-pip \
-&& rm -rf /var/cache/apk/*
+# 下载并安装 ChromeDriver (根据你的 Chrome 版本选择合适的版本)
+RUN wget https://chromedriver.storage.googleapis.com/LATEST_RELEASE/chromedriver_linux64.zip
+RUN unzip chromedriver_linux64.zip
+RUN mv chromedriver /usr/bin/chromedriver
+RUN chmod +x /usr/bin/chromedriver
 
 # 拷贝当前项目到/app目录下（.dockerignore中文件除外）
 COPY . /app
@@ -22,19 +23,19 @@ COPY . /app
 # 设定当前的工作目录
 WORKDIR /app
 
-# 安装依赖到指定的/install文件夹
-# 选用国内镜像源以提高下载速度
-RUN pip config set global.index-url http://mirrors.cloud.tencent.com/pypi/simple \
-&& pip config set global.trusted-host mirrors.cloud.tencent.com \
-&& pip install --upgrade pip \
-# pip install scipy 等数学包失败，可使用 apk add py3-scipy 进行， 参考安装 https://pkgs.alpinelinux.org/packages?name=py3-scipy&branch=v3.13
-&& pip install --user -r requirements.txt
+# 安装依赖
+RUN pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple #使用国内镜像源加速
+RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 暴露端口。
-# 此处端口必须与「服务设置」-「流水线」以及「手动上传代码包」部署时填写的端口一致，否则会部署失败。
-EXPOSE 80
+# 设置环境变量（在云托管控制台设置）
+# ENV MYSQL_HOST=your_mysql_host
+# ENV MYSQL_PORT=3306
+# ENV MYSQL_USER=your_mysql_user
+# ENV MYSQL_PASSWORD=your_mysql_password
+# ENV MYSQL_DATABASE=your_mysql_database
 
-# 执行启动命令
-# 写多行独立的CMD命令是错误写法！只有最后一行CMD命令会被执行，之前的都会被忽略，导致业务报错。
-# 请参考[Docker官方文档之CMD命令](https://docs.docker.com/engine/reference/builder/#cmd)
-CMD ["python3", "run.py", "0.0.0.0", "80"]
+# 暴露端口。使用 8080 端口，与 Gunicorn 绑定一致
+EXPOSE 8080
+
+# 执行启动命令,使用Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:app"]
