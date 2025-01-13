@@ -2,8 +2,9 @@ FROM python:3.9-slim-buster
 # 更换基础镜像，alpine镜像对selenium支持不好
 
 # 容器默认时区为UTC，如需使用上海时间请启用以下时区设置命令
-RUN apt-get update && apt-get install -y tzdata && \ # 修改安装方式
-RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+RUN apt-get update 
+RUN apt-get install -y tzdata term-readline
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 
 RUN echo "Asia/Shanghai" > /etc/timezone
 
 # 安装必要的系统依赖(selenium需要)
