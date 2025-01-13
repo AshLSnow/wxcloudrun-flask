@@ -10,6 +10,9 @@ SQLAlchemy==1.4.29
 Werkzeug==2.0.2
 Flask
 mysql-connector-python
-gunicorn
 selenium
 pandas
+apscheduler
+gunicorn
+beautifulsoup4 
+lxml
