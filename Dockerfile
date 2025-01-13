@@ -1,4 +1,5 @@
-FROM python:3.9-slim-buster # 更换基础镜像，alpine镜像对selenium支持不好
+FROM python:3.9-slim-buster 
+# 更换基础镜像，alpine镜像对selenium支持不好
 
 # 容器默认时区为UTC，如需使用上海时间请启用以下时区设置命令
 RUN apt-get update && apt-get install -y tzdata && \ # 修改安装方式
@@ -21,7 +22,8 @@ COPY . /app
 WORKDIR /app
 
 # 安装依赖
-RUN pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple #使用国内镜像源加速
+RUN pip install --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple 
+#使用国内镜像源加速
 RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 设置环境变量（在云托管控制台设置）
